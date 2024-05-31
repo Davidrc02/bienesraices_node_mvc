@@ -1,5 +1,6 @@
 import {Categoria, Precio, Propiedad } from '../models/index.js'
 import { Sequelize} from 'sequelize'
+
 const inicio = async (req, res) => {
     const [categorias, precios, casas, departamentos] = await Promise.all([
         Categoria.findAll({raw: true}),
@@ -36,15 +37,14 @@ const inicio = async (req, res) => {
         })
     ])
 
-    console.log(categorias)
-
-    res.render("inicio",{
+    res.setHeader('X-Test-Message', 'El inicio ha sido cargado correctamente');
+    res.status(200).render("inicio",{
         pagina:'Inicio',
         categorias,
         precios,
         casas,
         departamentos,
-        csrfToken: req.csrfToken()
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '' 
     })
 }
 
@@ -53,6 +53,7 @@ const categoria = async (req, res) => {
 
     const categoria = await Categoria.findByPk(id)
     if(!categoria){
+        res.setHeader('X-Test-Message', 'Se ha redireccionado a 404');
         return res.redirect("/404")
     }
 
@@ -65,24 +66,27 @@ const categoria = async (req, res) => {
         ]
     })
 
-    res.render('categoria', {
+    res.setHeader('X-Test-Message', 'Se han cargado correctamente las categorias');
+    res.status(200).render('categoria', {
         pagina: `${categoria.nombre}s en venta`,
         propiedades,
-        csrfToken: req.csrfToken()
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '' 
     })
 }
 
 const noEncontrado = async (req, res) => {
-    res.render('404', {
+    res.setHeader('X-Test-Message', 'Pagina no Encontrada');
+    res.status(404).render('404', {
         pagina: 'Pagina No Encontrada',
-        csrfToken: req.csrfToken()
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : ''
     })
 }
 
 const buscador = async (req, res) => {
-    const { termino } = req.body
+    const { termino } = process.env.NODE_ENV != 'test' ? req.body : req.headers
 
     if(!termino.trim()) {
+        res.setHeader('X-Test-Message', 'No se ha escrito nada');
         return res.redirect('back')
     }
 
@@ -99,10 +103,11 @@ const buscador = async (req, res) => {
         ]
     })
 
-    res.render('busqueda', {
+    res.setHeader('X-Test-Message', 'La busqueda se ha realizado con exito');
+    res.status(200).render('busqueda', {
         pagina: 'Resultados de la Búsqueda',
         propiedades,
-        csrfToken: req.csrfToken()
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : ''
     })
 }
 

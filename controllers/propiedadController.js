@@ -6,16 +6,17 @@ import { esVendedor, formatearFecha} from "../helpers/index.js"
 const admin = async (req, res) => {
 
     const { pagina: paginaActual } = req.query
-
+    
     //Expresión regular
     const expresion = /^[1-9]$/
 
     if (!expresion.test(paginaActual)) {
+        res.setHeader('X-Test-Message', 'La pagina actual no estaba correctamente puesta');
         return res.redirect('/mis-propiedades?pagina=1')
     }
 
     try {
-        const { id } = req.usuario
+        const { id } = process.env.NODE_ENV != 'test' ? req.usuario : req.headers
 
         //Limites y Offset para el paginador
         const limit = 5;
@@ -39,10 +40,10 @@ const admin = async (req, res) => {
                 }
             })
         ])
-
-        res.render('propiedades/admin', {
+        res.setHeader('X-Test-Message', 'Las propiedades han sido encontradas');
+        res.status(200).render('propiedades/admin', {
             pagina: 'Mis Propiedades',
-            csrfToken: req.csrfToken(),
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
             propiedades,
             paginas: Math.ceil(total / limit),
             paginaActual : Number(paginaActual),
@@ -62,9 +63,10 @@ const crear = async (req, res) => {
         Precio.findAll()
     ])
 
-    res.render('propiedades/crear', {
+    res.setHeader('X-Test-Message', 'La pagina para crear una propiedad ha sido cargada');
+    res.status(200).render('propiedades/crear', {
         pagina: 'Crear propiedad',
-        csrfToken: req.csrfToken(),
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
         categorias,
         precios,
         datos: {}
@@ -74,28 +76,28 @@ const crear = async (req, res) => {
 const guardar = async (req, res) => {
     //Validacion
     let resultado = validationResult(req)
-
+    console.log("RESULTADO: "+resultado)
     if (!resultado.isEmpty()) {
         const [categorias, precios] = await Promise.all([
             Categoria.findAll(),
             Precio.findAll()
         ])
 
-        return res.render('propiedades/crear', {
+        res.setHeader('X-Test-Message', 'Ha habido un error en el formulario de creacion');
+        return res.status(400).render('propiedades/crear', {
             pagina: 'Crear propiedad',
-            csrfToken: req.csrfToken(),
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
             categorias,
             precios,
             errores: resultado.array(),
             datos: req.body
         })
     }
-    const { titulo, descripcion, habitaciones, estacionamiento, wc, calle, lat, lng, precio: precioId, categoria: categoriaId } = req.body
+    const { titulo, descripcion, habitaciones, estacionamiento, wc, calle, lat, lng, precio: precioId, categoria: categoriaId } = process.env.NODE_ENV != 'test' ? req.body : req.headers
 
-    const { id: usuarioId } = req.usuario
+    const { id: usuarioId } = process.env.NODE_ENV != 'test' ? req.usuario : req.headers
 
     try {
-        console.log(req.body)
         const propiedadGuardada = await Propiedad.create({
             titulo,
             descripcion,
@@ -111,7 +113,7 @@ const guardar = async (req, res) => {
             imagen: ''
         })
         const { id } = propiedadGuardada
-
+        res.setHeader('X-Test-Message', 'Redireccionamiento a agregar imagen');
         res.redirect(`/propiedades/agregar-imagen/${id}`)
 
     } catch (error) {
@@ -142,7 +144,7 @@ const agregarImagen = async (req, res) => {
 
     res.render("propiedades/agregar-imagen", {
         pagina: 'Agregar Imagen',
-        csrfToken: req.csrfToken(),
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
         propiedad
     })
 }
@@ -201,7 +203,7 @@ const editar = async (req, res) => {
 
     res.render('propiedades/editar', {
         pagina: `Editar propiedad: ${propiedad.titulo}`,
-        csrfToken: req.csrfToken(),
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
         categorias,
         precios,
         datos: propiedad
@@ -219,7 +221,7 @@ const guardarCambios = async (req, res) => {
 
         return res.render('propiedades/editar', {
             pagina: 'Editar propiedad',
-            csrfToken: req.csrfToken(),
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
             categorias,
             precios,
             errores: resultado.array(),
@@ -327,12 +329,11 @@ const mostrarPropiedad = async (req, res) => {
         return res.redirect('/404')
     }
 
-    console.log( esVendedor(req.usuario?.id, propiedad.usuarioId))
 
     res.render('propiedades/mostrar', {
         propiedad,
         pagina: propiedad.titulo,
-        csrfToken: req.csrfToken(),
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
         usuario: req.usuario,
         esVendedor: esVendedor(req.usuario?.id, propiedad.usuarioId)
     })
@@ -360,15 +361,12 @@ const enviarMensaje = async (req, res) => {
         return res.render('propiedades/mostrar', {
             propiedad,
             pagina: propiedad.titulo,
-            csrfToken: req.csrfToken(),
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
             usuario: req.usuario,
             esVendedor: esVendedor(req.usuario?.id, propiedad.usuarioId),
             errores: resultado.array()
         })
     }
-    console.log(req.body)
-    console.log(req.params)
-    console.log(req.usuario)
 
     const { mensaje } = req.body
     const { id: propiedadId } = req.params
@@ -383,7 +381,7 @@ const enviarMensaje = async (req, res) => {
     // res.render('propiedades/mostrar', {
     //     propiedad,
     //     pagina: propiedad.titulo,
-    //     csrfToken: req.csrfToken(),
+    //     csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
     //     usuario: req.usuario,
     //     esVendedor: esVendedor(req.usuario?.id, propiedad.usuarioId),
     //     enviado:true

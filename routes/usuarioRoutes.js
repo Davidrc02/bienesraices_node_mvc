@@ -23,23 +23,4 @@ router.get('/confirmar/:token', confirmar)
 
 export default router
 
-// router.get('/', (req, res) => {
-//     res.json({msg: "Hola mundo en Express"})
-// });
-
-// router.post('/', (req, res) => {
-//     res.json({msg: "Hola mundo en Express POST"})
-// });
-
-// router.get('/nosotros', function(req, res){
-//     res.send("Informacion de nosotros")
-// });
-
-// router.route('/')
-//     .get(function(req, res){
-//         res.json({msg: "Hola mundo en Express"})
-//     })
-//     .post(function(req, res){
-//         res.json({msg: "Hola mundo en Express POST"})
-//     })
 

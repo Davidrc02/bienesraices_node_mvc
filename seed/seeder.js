@@ -20,7 +20,6 @@ const importarDatos = async () => {
             Usuario.bulkCreate(usuarios)
         ])
 
-        console.log('Datos Importados Correctamente')
         exit()
 
     }catch(error){
@@ -38,7 +37,6 @@ const eliminarDatos = async () => {
         //])
         await db.sync({force:true})
 
-        console.log('Datos Eliminados Correctamente')
         exit()
 
     }catch(error){

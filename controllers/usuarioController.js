@@ -2,11 +2,11 @@
 ///////////////////////////IMPORTS///////////////////////////////
 /////////////////////////////////////////////////////////////////
 
-import {check, validationResult } from 'express-validator'
+import { check, validationResult } from 'express-validator'
 import bcrypt from 'bcrypt'
 import Usuario from '../models/Usuario.js'
-import {generarId, generarJWT} from '../helpers/tokens.js'
-import {emailRegistro, emailOlvidePassword} from '../helpers/emails.js'
+import { generarId, generarJWT } from '../helpers/tokens.js'
+import { emailRegistro, emailOlvidePassword } from '../helpers/emails.js'
 
 
 /////////////////////////////////////////////////////////////////
@@ -14,15 +14,16 @@ import {emailRegistro, emailOlvidePassword} from '../helpers/emails.js'
 /////////////////////////////////////////////////////////////////
 
 const formularioLogin = (req, res) => {
-    res.render('auth/login', {
+    res.setHeader('X-Test-Message', 'Formulario de login cargado correctamente');
+    res.status(200).render('auth/login', {
         pagina: "Iniciar Sesion",
-        csrfToken: req.csrfToken()
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : ''
     })
 }
 
-
 const cerrarSesion = (req, res) => {
-    return res.clearCookie('_token').status(200).redirect("/auth/login")
+    res.setHeader('X-Test-Message', 'Ha cerrado sesion exitosamente');
+    return res.clearCookie('_token').redirect("/auth/login")
 }
 
 /////////////////////////////////////////////////////////////////
@@ -36,50 +37,53 @@ const autenticar = async (req, res) => {
 
     let resultado = validationResult(req)
 
-    if(!resultado.isEmpty()){
-        return res.render('auth/login', {
+    if (!resultado.isEmpty()) {
+        res.setHeader('X-Test-Message', 'Error de validacion en la autenticacion');
+        return res.status(400).render('auth/login', {
             pagina: "Iniciar Sesion",
             errores: resultado.array(),
-            csrfToken: req.csrfToken()
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : ''
         })
     }
 
-    const {email, password} = req.body
+    const {email, password } = process.env.NODE_ENV == 'test' ? req.headers : req.body
+
 
     //Verificar que el usuario no esté duplicado
-    const usuario = await Usuario.findOne({where: {email}})
+    const usuario = await Usuario.findOne({ where: { email } })
 
     //Comprobar usuario
-    if(!usuario){
-        return res.render('auth/login', {
+    if (!usuario) {
+        res.setHeader('X-Test-Message', 'El Usuario No Existe');
+        return res.status(404).render('auth/login', {
             pagina: "Iniciar Sesion",
-            csrfToken: req.csrfToken(),
-            errores: [{msg: 'El Usuario No Existe'}]
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
+            errores: [{ msg: 'El Usuario No Existe' }]
         })
     }
 
-    if(!usuario.confirmado){
-        return res.render('auth/login', {
+    if (!usuario.confirmado) {
+        res.setHeader('X-Test-Message', 'El Usuario No Esta Confirmado');
+        return res.status(401).render('auth/login', {
             pagina: "Iniciar Sesion",
-            csrfToken: req.csrfToken(),
-            errores: [{msg: 'El Usuario No Está Confirmado'}]
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
+            errores: [{ msg: 'El Usuario No Está Confirmado' }]
         })
     }
 
     //Comprobar contraseña con BCRYPT
-    if(!usuario.verificarPassword(password)){
-        return res.render('auth/login', {
+    if (!usuario.verificarPassword(password)) {
+        res.setHeader('X-Test-Message', 'El Password es incorrecto!');
+        return res.status(401).render('auth/login', {
             pagina: "Iniciar Sesion",
-            csrfToken: req.csrfToken(),
-            errores: [{msg: 'El Password es incorrecto!'}]
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
+            errores: [{ msg: 'El Password es incorrecto!' }]
         })
     }
 
-    const token = generarJWT({id: usuario.id, nombre:usuario.nombre})
+    const token = generarJWT({ id: usuario.id, nombre: usuario.nombre })
 
-    console.log(token)
-
-    //Almacenar en un cookie
+    res.setHeader('X-Test-Message', 'Autenticacion exitosa');
     return res.cookie('_token', token, {
         httpOnly: true
     }).redirect('/mis-propiedades')
@@ -90,9 +94,10 @@ const autenticar = async (req, res) => {
 /////////////////////////////////////////////////////////////////
 
 const formularioRegistro = (req, res) => {
-    res.render('auth/registro', {
+    res.setHeader('X-Test-Message', 'Formulario de registro cargado correctamente');
+    res.status(200).render('auth/registro', {
         pagina: "Crear cuenta",
-        csrfToken: req.csrfToken()
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : ''
     })
 }
 
@@ -100,20 +105,21 @@ const formularioRegistro = (req, res) => {
 //////////////////////REGISTRAR CUENTA///////////////////////////
 /////////////////////////////////////////////////////////////////
 
-const registrar = async (req, res) => { 
+const registrar = async (req, res) => {
     //Validacion
     await check('nombre').notEmpty().withMessage("El nombre no puede ir vacío").run(req)
     await check('email').isEmail().withMessage("El email no tiene el formato correcto").run(req)
-    await check('password').isLength({min:6}).withMessage("El password tiene que tener al menos 6 caracteres").run(req)
-    await check('repetir_password').equals(req.body.password).withMessage("Los passwords no son iguales").run(req)
+    await check('password').isLength({ min: 6 }).withMessage("El password tiene que tener al menos 6 caracteres").run(req)
+    await check('repetir_password').equals(process.env.NODE_ENV != 'test' ?  req.body.password : req.headers.password).withMessage("Los passwords no son iguales").run(req)
 
     let resultado = validationResult(req)
 
-    if(!resultado.isEmpty()){
-        return res.render('auth/registro', {
+    if (!resultado.isEmpty()) {
+        res.setHeader('X-Test-Message', 'Error de validacion en la autenticacion');
+        return res.status(400).render('auth/registro', {
             pagina: "Crear cuenta",
             errores: resultado.array(),
-            csrfToken: req.csrfToken(),
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
             usuario: {
                 nombre: req.body.nombre,
                 email: req.body.email
@@ -121,14 +127,15 @@ const registrar = async (req, res) => {
         })
     }
 
-    const {nombre, email, password} = req.body
+    const { nombre, email, password } = process.env.NODE_ENV == 'test' ? req.headers : req.body
 
     //Verificar que el usuario no esté duplicado
-    const existeUsuario = await Usuario.findOne({where: {email}})
-    if(existeUsuario){
-        return res.render('auth/registro', {
+    const existeUsuario = await Usuario.findOne({ where: { email } })
+    if (existeUsuario) {
+        res.setHeader('X-Test-Message', 'El usuario ya existe');
+        return res.status(409).render('auth/registro', {
             pagina: "Crear cuenta",
-            errores: [{msg: 'El usuario ya está registrado'}],
+            errores: [{ msg: 'El usuario ya está registrado' }],
             usuario: {
                 nombre: nombre,
                 email: email
@@ -147,14 +154,16 @@ const registrar = async (req, res) => {
     //Envia email de Confirmacion
     emailRegistro({
         nombre: usuario.nombre,
-        email:usuario.email,
+        email: usuario.email,
         token: usuario.token
     })
 
     //Mostrar mensaje de confirmación
-    res.render('templates/mensaje',{
+    res.setHeader('X-Test-Message', 'El usuario se ha creado correctamente');
+    res.status(201).render('templates/mensaje', {
         pagina: 'Cuenta Creada Correctamente',
-        mensaje: 'Hemos Enviado un Email de Confirmación, presiona en el enlace'
+        mensaje: 'Hemos Enviado un Email de Confirmación, presiona en el enlace',
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : ''
     })
 }
 
@@ -164,12 +173,13 @@ const registrar = async (req, res) => {
 
 //Funcion que confirma una cuenta
 const confirmar = async (req, res) => {
-    const {token} =req.params
+    const { token } = req.params
 
-    const usuario = await Usuario.findOne({where: {token}})
+    const usuario = await Usuario.findOne({ where: { token } })
 
-    if(!usuario){
-        return res.render('auth/confirmar-cuenta', {
+    if (!usuario) {
+        res.setHeader('X-Test-Message', 'Error al confirmar');
+        return res.status(403).render('auth/confirmar-cuenta', {
             pagina: 'Error al confirmar tu cuenta',
             mensaje: 'Hubo un error al confirmar tu cuenta, intenta de nuevo',
             error: true
@@ -177,10 +187,11 @@ const confirmar = async (req, res) => {
     }
 
     usuario.token = null;
-    usuario.confirmado= true;
+    usuario.confirmado = true;
     await usuario.save()
 
-    res.render('auth/confirmar-cuenta', {
+    res.setHeader('X-Test-Message', 'El usuario se ha confirmado correctamente');
+    res.status(200).render('auth/confirmar-cuenta', {
         pagina: 'Cuenta Confirmada',
         mensaje: 'La cuenta se confirmó Correctamente'
     })
@@ -193,7 +204,7 @@ const confirmar = async (req, res) => {
 const formularioOlvidePassword = (req, res) => {
     res.render('auth/olvide-password', {
         pagina: "Recuperar acceso a BienesRaices",
-        csrfToken: req.csrfToken(),
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
     })
 }
 
@@ -207,24 +218,24 @@ const resetPassword = async (req, res) => {
 
     let resultado = validationResult(req)
 
-    if(!resultado.isEmpty()){
+    if (!resultado.isEmpty()) {
         return res.render('auth/olvide-password', {
             pagina: "Recuperar acceso a BienesRaices",
             errores: resultado.array(),
-            csrfToken: req.csrfToken(),
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
         })
     }
 
     //Buscar un usuario
     const { email } = req.body
 
-    const usuario = await Usuario.findOne({where: { email }})
+    const usuario = await Usuario.findOne({ where: { email } })
 
-    if(!usuario){
+    if (!usuario) {
         return res.render('auth/olvide-password', {
             pagina: "Recuperar acceso a BienesRaices",
-            csrfToken: req.csrfToken(),
-            errores : [{msg: 'El email no Pertenece a ningún usuario'}]
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
+            errores: [{ msg: 'El email no Pertenece a ningún usuario' }]
         })
     }
 
@@ -251,11 +262,11 @@ const resetPassword = async (req, res) => {
 /////////////////////////////////////////////////////////////////
 
 const comprobarToken = async (req, res) => {
-    const {token} = req.params;
+    const { token } = req.params;
 
-    const usuario = await Usuario.findOne({where: {token}})
+    const usuario = await Usuario.findOne({ where: { token } })
 
-    if(!usuario){
+    if (!usuario) {
         return res.render('auth/confirmar-cuenta', {
             pagina: 'Reestablece tu Password',
             mensaje: 'Hubo un error al validar tu información, intenta de nuevo',
@@ -266,7 +277,7 @@ const comprobarToken = async (req, res) => {
     //Mostrar formulario para modificar el password
     res.render('auth/reset-password', {
         pagina: 'Reestablece Tu Password',
-        csrfToken: req.csrfToken()
+        csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : ''
     })
 
 }
@@ -277,15 +288,15 @@ const comprobarToken = async (req, res) => {
 
 const nuevoPassword = async (req, res) => {
 
-    await check('password').isLength({min:6}).withMessage("El password tiene que tener al menos 6 caracteres").run(req)
-    
+    await check('password').isLength({ min: 6 }).withMessage("El password tiene que tener al menos 6 caracteres").run(req)
+
     let resultado = validationResult(req)
 
-    if(!resultado.isEmpty()){
+    if (!resultado.isEmpty()) {
         return res.render('auth/reset-password', {
             pagina: "Crear cuenta",
             errores: resultado.array(),
-            csrfToken: req.csrfToken(),
+            csrfToken: process.env.NODE_ENV != 'test' ? req.csrfToken() : '',
             usuario: {
                 nombre: req.body.nombre,
                 email: req.body.email
@@ -293,14 +304,14 @@ const nuevoPassword = async (req, res) => {
         })
     }
 
-    const {token} = req.params
-    const {password} = req.body
-    const usuario = await Usuario.findOne({where : {token}})
+    const { token } = req.params
+    const { password } = req.body
+    const usuario = await Usuario.findOne({ where: { token } })
 
     //Hashear el password
     const salt = await bcrypt.genSalt(10)
     usuario.password = await bcrypt.hash(password, salt);
-    usuario.token= null;
+    usuario.token = null;
 
     await usuario.save();
 
@@ -314,7 +325,7 @@ const nuevoPassword = async (req, res) => {
 //////////////////////////EXPORTS////////////////////////////////
 /////////////////////////////////////////////////////////////////
 
-export{
+export {
     cerrarSesion,
     formularioLogin,
     formularioRegistro,

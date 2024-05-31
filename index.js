@@ -13,12 +13,13 @@ const app = express()
 
 //Habilitar lectura de datos de formularios
 app.use( express.urlencoded({extended:true}))
-
 //Habilitar Cookie Parser
 app.use( cookieParser())
-
 //Hablitar CSRF
-app.use(csrf({cookie:true}))
+if(process.env.NODE_ENV != 'test'){
+    app.use(csrf({cookie:true}))
+}
+
 
 //Conexión a la base de datos
 try{
@@ -32,10 +33,8 @@ try{
 //Habilitar Pug
 app.set('view engine', 'pug')
 app.set('views', './views')
-
 //Carpeta publica
 app.use( express.static('public'))
-
 //Routing
 app.use('/', appRoutes)
 app.use('/auth', usuarioRoutes)
@@ -43,17 +42,4 @@ app.use('/', propiedadesRoutes)
 app.use('/api', apiRoutes)
 
 
-
-/////////////////////////////////////////////////////////////////
-///////////////////////////PUERTO////////////////////////////////
-/////////////////////////////////////////////////////////////////
-
-//Definir un puerto y arrancar el proyecto
-const port = process.env.PORT || 3000;
-
-app.listen(port, () => {
-    console.log(`El servidor está funcionando en el puerto ${port}`)
-})
-
-
-
+export default app;

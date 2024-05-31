@@ -26,7 +26,6 @@
 
         //Obtener la informacion de la calle al soltar el pin
         geocodeService.reverse().latlng(posicion, 13).run(function(error, resultado){
-            console.log(resultado.address.LongLabel)
             marker.bindPopup(resultado.address.LongLabel)
 
             document.querySelector('.calle').textContent = resultado?.address?.Address ?? '';
